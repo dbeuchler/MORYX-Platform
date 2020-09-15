@@ -1,9 +1,9 @@
 # Tool Versions
 $NunitVersion = "3.11.1";
 $OpenCoverVersion = "4.7.922";
-$DocFxVersion = "2.52.0";
-$CodecovVersion = "1.10.0";
-$ReportGeneratorVersion = "4.5.6";
+$DocFxVersion = "2.56.2";
+$CodecovVersion = "1.12.3";
+$ReportGeneratorVersion = "4.6.7";
 
 # Folder Pathes
 $RootPath = $MyInvocation.PSScriptRoot;
@@ -23,7 +23,6 @@ $OpenCoverReportsDir = "$ArtifactsDir\Tests"
 # Nuget
 $NugetConfig = "$RootPath\NuGet.Config";
 $NugetPackageArtifacts = "$ArtifactsDir\Packages";
-$NugetPackageTarget = "https://www.myget.org/F/moryx/api/v2/package";
 
 # Load partial scripts
 . "$PSScriptRoot\Output.ps1";
@@ -103,6 +102,10 @@ function Invoke-Initialize([string]$Version = "1.0.0", [bool]$Cleanup = $False) 
         $env:MORYX_BRANCH = "unknown";
     }
 
+    if (-not $env:MORYX_PACKAGE_TARGET) {
+        $env:MORYX_PACKAGE_TARGET = "";
+    }
+
     Set-Version $Version;
 
     # Printing Variables
@@ -129,6 +132,7 @@ function Invoke-Initialize([string]$Version = "1.0.0", [bool]$Cleanup = $False) 
     Write-Variable "MORYX_BUILD_VERBOSITY" $env:MORYX_BUILD_VERBOSITY;
     Write-Variable "MORYX_TEST_VERBOSITY" $env:MORYX_TEST_VERBOSITY;
     Write-Variable "MORYX_NUGET_VERBOSITY" $env:MORYX_NUGET_VERBOSITY;
+    Write-Variable "MORYX_PACKAGE_TARGET" $env:MORYX_PACKAGE_TARGET;
 
     # Cleanp
     if ($Cleanup) {
@@ -440,11 +444,11 @@ function Invoke-PackAll([switch]$Symbols = $False) {
 }
 
 function Invoke-Publish {
-    Write-Host "Pushing packages from $NugetPackageArtifacts to $NugetPackageTarget"
+    Write-Host "Pushing packages from $NugetPackageArtifacts to $env:MORYX_PACKAGE_TARGET"
     $packages = Get-ChildItem $NugetPackageArtifacts -Recurse -Include '*.nupkg'
 
     foreach ($package in $packages) {
-        & $global:NugetCli push $package $env:MORYX_NUGET_APIKEY -Source $NugetPackageTarget -Verbosity $env:MORYX_NUGET_VERBOSITY
+        & $global:NugetCli push $package $env:MORYX_NUGET_APIKEY -Source $env:MORYX_PACKAGE_TARGET -Verbosity $env:MORYX_NUGET_VERBOSITY
         Invoke-ExitCodeCheck $LastExitCode;
     }
 }
