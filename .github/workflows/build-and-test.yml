@@ -15,8 +15,8 @@ on:
 env:
   MORYX_OPTIMIZE_CODE: "false"
   MORYX_BUILD_CONFIG: "Release"
-  MORYX_BUILDNUMBER: ${{github.run_number}}
-  MORYX_BRANCH: ${{github.ref}} #TODO: ${{github.ref}} parse branch name
+  MORYX_BUILDNUMBER: ${{github.run_id}}
+  MORYX_GIT_REF: ${{github.ref}}
   MORYX_CODECOV_SECRET: ${{secrets.CODECOV_TOKEN}}
   MORYX_NUGET_APIKEY: ${{secrets.MYGET_TOKEN}}
   MORYX_PACKAGE_TARGET: "https://www.myget.org/F/moryx/api/v2/package"
@@ -67,7 +67,7 @@ jobs:
             path: artifacts/Tests
   Publish:
     needs: [Test]
-    if: (github.event_name == 'push')
+    if: ${{ (github.ref == 'refs/heads/dev' || contains(github.ref, 'tags/v*-beta.*')) && github.event_name == 'push' }}
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
