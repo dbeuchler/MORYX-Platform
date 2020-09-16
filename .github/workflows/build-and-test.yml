@@ -63,7 +63,7 @@ jobs:
         - name: Codecov
           uses: codecov/codecov-action@v1
           with:
-            files: ./artifacts/Tests/*.OpenCover.xml 
+            files: './artifacts/Tests/*.OpenCover.xml'
   Publish:
     needs: [Test]
     if: ${{ (github.ref == 'refs/heads/dev' || contains(github.ref, 'tags/v*-beta.*')) && github.event_name == 'push' }}
