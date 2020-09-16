@@ -52,19 +52,18 @@ jobs:
           shell: pwsh
           run: ./Build.ps1 -UnitTests
 
-        - name: Execute Integration Tests
-          shell: pwsh
-          run: ./Build.ps1 -IntegrationTests
+        #- name: Execute Integration Tests
+        #  shell: pwsh
+        #  run: ./Build.ps1 -IntegrationTests
 
         - name: Cover Report
           shell: pwsh
           run: ./Build.ps1 -CoverReport
 
-        - name: Upload test results
-          uses: actions/upload-artifact@v1
+        - name: Codecov
+          uses: codecov/codecov-action@v1
           with:
-            name: test-results
-            path: artifacts/Tests
+            file: ./artifacts/Tests/*.OpenCover.xml 
   Publish:
     needs: [Test]
     if: ${{ (github.ref == 'refs/heads/dev' || contains(github.ref, 'tags/v*-beta.*')) && github.event_name == 'push' }}

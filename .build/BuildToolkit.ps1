@@ -2,7 +2,6 @@
 $NunitVersion = "3.11.1";
 $OpenCoverVersion = "4.7.922";
 $DocFxVersion = "2.56.2";
-$CodecovVersion = "1.12.3";
 $ReportGeneratorVersion = "4.6.7";
 
 # Folder Pathes
@@ -34,7 +33,6 @@ $global:NugetCli = "nuget.exe";
 $global:GitCli = "";
 $global:OpenCoverCli = "$BuildTools\OpenCover.$OpenCoverVersion\tools\OpenCover.Console.exe";
 $global:NunitCli = "$BuildTools\NUnit.ConsoleRunner.$NunitVersion\tools\nunit3-console.exe";
-$global:CodecovCli = "$BuildTools\Codecov.$CodecovVersion\tools\codecov.exe";
 $global:ReportGeneratorCli = "$BuildTools\ReportGenerator.$ReportGeneratorVersion\tools\net47\ReportGenerator.exe";
 $global:DocFxCli = "$BuildTools\docfx.console.$DocFxVersion\tools\docfx.exe";
 
@@ -126,7 +124,6 @@ function Invoke-Initialize([string]$Version = "1.0.0", [bool]$Cleanup = $False) 
     Write-Variable "InformationalVersion" $global:InformationalVersion;
     Write-Variable "OpenCoverCli" $global:OpenCoverCli;
     Write-Variable "NUnitCli" $global:NUnitCli;
-    Write-Variable "CodecovCli" $global:OpenCoverCli;
     Write-Variable "ReportGeneratorCli" $global:ReportGeneratorCli;
     Write-Variable "DocFxCli" $global:DocFxCli;
     Write-Variable "GitCli" $global:GitCli;
@@ -373,22 +370,6 @@ function Invoke-CoverReport {
     Invoke-ExitCodeCheck $LastExitCode;
 }
 
-function Invoke-CodecovUpload {
-    Write-Step "Uploading cover reports to codecov. Searching for OpenCover.xml files in $OpenCoverReportsDir."
-
-    if (-not (Test-Path $global:CodecovCli)) {
-        Install-Tool "Codecov" $CodecovVersion $global:CodecovCli;
-    }
-
-    $covargs = "-f", "$OpenCoverReportsDir\*.OpenCover.xml";
-    if ($env:MORYX_CODECOV_SECRET) {
-        $covargs += "-t", "$env:MORYX_CODECOV_SECRET";
-    }
-
-    & $global:CodecovCli @covargs;
-    #Invoke-ExitCodeCheck $LastExitCode;
-}
-
 function Invoke-DocFx($Metadata = [System.IO.Path]::Combine($DocumentationDir, "docfx.json")) {
     Write-Step "Generating documentation using DocFx"
 
@@ -417,7 +398,7 @@ function Invoke-Pack($FilePath, [bool]$IsTool = $False, [bool]$IncludeSymbols = 
 
     $packargs = "-outputdirectory", "$NugetPackageArtifacts";
     $packargs += "-includereferencedprojects";
-    $packargs += "-Version", "$env:MORYX_VERSION";
+    $packargs += "-Version", "$global:InformationalVersion";
     $packargs += "-Prop", "Configuration=$env:MORYX_BUILD_CONFIG";
     $packargs += "-Verbosity", "$env:MORYX_NUGET_VERBOSITY";
 
@@ -473,7 +454,6 @@ function Set-Version ([string]$MajorMinorPatch) {
 
     $semVer2Regex = "^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?<patch>0|[1-9]\d*)(?:-(?<prerelease>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?<buildmetadata>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$";
 
-    $refName = "";
     $ref = $env:MORYX_GIT_REF;
     if ($ref -like "refs/tags/v*") {
         # Its a version tag
@@ -496,12 +476,6 @@ function Set-Version ([string]$MajorMinorPatch) {
 
         # Compose Major.Minor.Patch
         $mmp = $majorGroup.Value + "." + $minorGroup.Value + "." + $patchGroup.Value;
-
-        # Check if the tag version matches the version of the repository
-        if ($mmp -ne $MajorMinorPatch) {
-            Write-Host "Version of tag ($mmp) does not match version of repository $MajorMinorPatch!"
-            Invoke-ExitCodeCheck 1;
-        }
 
         # Check if it is a pre release
         if ($preReleaseGroup.Success) {
@@ -580,10 +554,10 @@ function Set-VsixManifestVersion([string]$VsixManifest) {
     }
     
     [xml]$manifestContent = Get-Content $file
-    $manifestContent.PackageManifest.Metadata.Identity.Version = $env:MORYX_ASSEMBLY_VERSION
+    $manifestContent.PackageManifest.Metadata.Identity.Version = $global:AssemblyVersion
     $manifestContent.Save($VsixManifest) 
 
-    Write-Host "Version $env:MORYX_ASSEMBLY_VERSION applied to $VsixManifest!"
+    Write-Host "Version $global:AssemblyVersion applied to $VsixManifest!"
 }
 
 function Set-VsTemplateVersion([string]$VsTemplate) {
@@ -597,11 +571,11 @@ function Set-VsTemplateVersion([string]$VsTemplate) {
 
     $versionRegex = "(\d+)\.(\d+)\.(\d+)\.(\d+)"
 
-    $wizardAssemblyStrongName = $templateContent.VSTemplate.WizardExtension.Assembly -replace $versionRegex, $env:MORYX_ASSEMBLY_VERSION 
+    $wizardAssemblyStrongName = $templateContent.VSTemplate.WizardExtension.Assembly -replace $versionRegex, $global:AssemblyVersion 
     $templateContent.VSTemplate.WizardExtension.Assembly = $wizardAssemblyStrongName
     $templateContent.Save($vsTemplate)
 
-    Write-Host "Version $env:MORYX_ASSEMBLY_VERSION applied to $VsTemplate!"
+    Write-Host "Version $global:AssemblyVersion applied to $VsTemplate!"
 }
 
 function CreateFolderIfNotExists([string]$Folder) {
